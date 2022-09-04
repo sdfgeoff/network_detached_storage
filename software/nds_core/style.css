@@ -1,0 +1,104 @@
+@font-face {
+  font-family: bedstead;
+  src: url("bedstead.otf") format("opentype");
+}
+
+body {
+  font-family: 'bedstead';
+  color: cyan;
+  background: black;
+  margin: 0;
+}
+
+.overall {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.dialog {
+  text-align: center;
+  width: 20em;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1em;
+}
+
+.dialog h1 {
+  margin-top: 0;
+}
+
+.dialog table {
+  text-align: right;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+input {
+  border: none;
+  border-top:1px solid #033 ;
+  border-left:1px solid #033 ;
+  border-right:1px solid #033 ;
+  border-bottom: 2px solid cyan;
+  background: black;
+  color: cyan;
+  font-family: 'bedstead';
+  outline: none;
+}
+
+button.primary {
+  color: black;
+  background: cyan;
+  font-family: 'bedstead';
+  padding: 0.5em 2em;
+  border: none;
+}
+button.primary:hover {
+  background: white
+}
+
+button.secondary {
+  color: cyan;
+  background: black;
+  font-family: 'bedstead';
+  padding: 0.5em 2em;
+  border: 1px solid cyan;
+}
+button.secondary:hover {
+  color: white;
+  border: 1px solid white;
+}
+
+
+.borderStripedCyan {
+  border: 10px solid cyan;
+  border-image: repeating-linear-gradient( 45deg, cyan, cyan 1%, #033 1%, #033 8%) 10;
+}
+
+.borderStripedRed {
+  border: 10px solid cyan;
+  border-image: repeating-linear-gradient( 45deg, red, red 1%, #300 1%, #300 8%) 10;
+}
+
+
+.topbar {
+  display: flex;
+  padding: 0.5em;
+  border-bottom: 1px solid #033;
+  gap: 0.5em;
+}
+.flex-spacer {
+  flex-grow: 1;
+}
+
+.bottombar {
+  padding: 0.5em;
+  border-top: 1px solid #033;
+}
+
+a {
+  color: cyan;
+}
+a:hover {
+  color: white;
+}
