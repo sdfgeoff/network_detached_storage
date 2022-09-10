@@ -29,9 +29,10 @@ class HTTPResponse:
     data: bytes
     headers: Headers
 
-    def __init__(self, status_code: int, data: bytes):
+    def __init__(self, status_code: int, data: bytes = b'', headers: Headers = []):
         self.status_code = status_code
         self.data = data
+        self.headers = headers
 
 
 def create_http_socket(server_config: _Config) -> socket.socket:
@@ -115,7 +116,7 @@ def send_response_bytes(server_config: _Config, client_socket: socket.socket, pa
 
 def encode_page(response: HTTPResponse) -> bytes:
     status_line = f"HTTP/1.1 {response.status_code} {STATUS_CODE_TO_REASON[response.status_code]}".encode('utf-8')
-    headers = b''
+    headers = b'\n'.join(a+b': '+b for a,b in response.headers)
     return status_line + b'\r\n' + headers + b'\r\n' + response.data
 
 
@@ -127,17 +128,23 @@ def serve_page(server_config: _Config, http_socket: socket.socket, page_handler:
     except OSError:
         return
 
-    log.info('client_connected', {"addr": addr})
-    raw = get_data_from_client(client_socket)
-    if raw is not None:
-        page_request = parse_request(raw)
-        if page_request is not None:
-            page_response = page_handler(page_request)
-            page_bytes = encode_page(page_response)
-            send_response_bytes(server_config, client_socket, page_bytes)
+    try:
+        log.info('client_connected', {"addr": addr})
+        raw = get_data_from_client(client_socket)
+        if raw is not None:
+            page_request = parse_request(raw)
+            if page_request is not None:
+                try:
+                    page_response = page_handler(page_request)
+                except Exception as err:
+                    page_response = HTTPResponse(status_code=500)
+                    log.error("endpoint_failure", {"exception": str(err)})
 
+                page_bytes = encode_page(page_response)
+                send_response_bytes(server_config, client_socket, page_bytes)
+    except Exception as err:
+        log.error("server_failure", {"exception": str(err)})
 
-            
 
     client_socket.close()
 

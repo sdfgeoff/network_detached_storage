@@ -12,5 +12,5 @@ def info(event: str, data: Dict[str, Any]) -> None:
 def warn(event: str, data: Dict[str, Any]) -> None:
     _log("WARN", event, data)
 
-def err(event: str, data: Dict[str, Any]) -> None:
+def error(event: str, data: Dict[str, Any]) -> None:
     _log("ERROR", event, data)

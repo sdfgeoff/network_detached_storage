@@ -1,3 +1,6 @@
 *.blend1
 .tup
 *.gcode
+__pycache__
+*.pyc
+*.pyd
