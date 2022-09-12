@@ -91,7 +91,7 @@ def parse_request(raw: bytes) -> Optional[HTTPRequest]:
 
         method_raw, url_raw, protocol = lines[0].strip().split(b" ")
         headers: Headers = [
-            tuple(l.strip().split(b":", maxsplit=1))  # type: ignore # Mypy can't tell about the maxsplit
+            tuple([t.strip() for t in l.split(b":", maxsplit=1)])  # type: ignore # Mypy can't tell about the maxsplit
             for l in lines[1:]
         ]
 
@@ -105,10 +105,9 @@ def parse_request(raw: bytes) -> Optional[HTTPRequest]:
             key = spl[0]
             val = spl[1] if len(spl) > 1 else ""
             query_params.append((key, val))
-
-        # print(lines)
     except Exception as err:
         log.warn("failed_parsing_request", {"exception": str(err)})
+        return None
 
     return HTTPRequest(
         method=method,
@@ -149,7 +148,7 @@ def encode_page(response: HTTPResponse) -> bytes:
     status_line = f"HTTP/1.1 {response.status_code} {STATUS_CODE_TO_REASON[response.status_code]}".encode(
         "utf-8"
     )
-    headers = b"\n".join(a + b": " + b for a, b in response.headers)
+    headers = b"\r\n".join(a + b": " + b for a, b in response.headers)
     return status_line + b"\r\n" + headers + b"\r\n\r\n" + response.data
 
 
