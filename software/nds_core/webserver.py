@@ -9,6 +9,7 @@ from . import log
 
 Methods = Literal["GET", "POST", "DELETE"]
 Headers = List[Tuple[bytes, bytes]]
+QueryParams = List[Tuple[str, str]]
 
 
 class HTTPRequest:
@@ -16,12 +17,14 @@ class HTTPRequest:
     url: str
     content: bytes
     headers: Headers
+    query_params: QueryParams
 
-    def __init__(self, method: Methods, url: str, content: bytes, headers: Headers):
+    def __init__(self, method: Methods, url: str, content: bytes, headers: Headers, query_params: QueryParams):
         self.method = method
         self.url = url
         self.content = content
         self.headers = headers
+        self.query_params = query_params
 
 
 class HTTPResponse:
@@ -45,6 +48,7 @@ def create_http_socket(server_config: _Config) -> socket.socket:
 
     http_socket.listen(1)
     http_socket.settimeout(0)
+
     return http_socket
 
 
@@ -75,7 +79,15 @@ def parse_request(raw: bytes) -> Optional[HTTPRequest]:
         ]  
 
         method = parse_method(method_raw)
-        url = url_raw.decode('utf-8')
+        url_parts = url_raw.decode('utf-8').split('?', maxsplit=1)
+        url = url_parts[0]
+        query_str = url_parts[1] if len(url_parts) > 1 else ''
+        query_params = []
+        for query in query_str.split('&'):
+            spl = query.split("=", maxsplit=1)
+            key = spl[0]
+            val = spl[1] if len(spl) > 1 else ''
+            query_params.append((key, val))
     except Exception as err:
         log.warn("failed_parsing_request", {"exception": str(err)})
 
@@ -84,7 +96,8 @@ def parse_request(raw: bytes) -> Optional[HTTPRequest]:
         method=method, 
         url=url, 
         headers=headers ,
-        content=b""
+        content=b"",
+        query_params=query_params
     )
 
 
@@ -121,12 +134,13 @@ def encode_page(response: HTTPResponse) -> bytes:
 
 
 
-def serve_page(server_config: _Config, http_socket: socket.socket, page_handler: Callable[[HTTPRequest], HTTPResponse]) -> None:
-    '''A dumb http server that can serve multiple pages'''
+def serve_page(server_config: _Config, http_socket: socket.socket, page_handler: Callable[[HTTPRequest], HTTPResponse]) -> bool:
+    '''A dumb http server that can serve multiple page. Can only service a single client per
+    call. Returns True if a client was serviced'''
     try:
         client_socket, addr = http_socket.accept()
     except OSError:
-        return
+        return False
 
     try:
         log.info('client_connected', {"addr": addr})
@@ -134,12 +148,20 @@ def serve_page(server_config: _Config, http_socket: socket.socket, page_handler:
         if raw is not None:
             page_request = parse_request(raw)
             if page_request is not None:
+                log.info('requesting_page', {"addr": addr, "url": page_request.url})
                 try:
                     page_response = page_handler(page_request)
                 except Exception as err:
-                    page_response = HTTPResponse(status_code=500)
-                    log.error("endpoint_failure", {"exception": str(err)})
-
+                    page_response = page_handler(HTTPRequest(
+                        method="GET",
+                        url="/500.html",
+                        content=b'',
+                        headers=[],
+                        query_params=[]
+                    ))
+                    log.error("endpoint_failure", {"exception": str(err), "url": page_request.url})
+                
+                log.info('endpoint_response', {"addr": addr, "url": page_request.url, "status_code": page_response.status_code})
                 page_bytes = encode_page(page_response)
                 send_response_bytes(server_config, client_socket, page_bytes)
     except Exception as err:
@@ -147,6 +169,7 @@ def serve_page(server_config: _Config, http_socket: socket.socket, page_handler:
 
 
     client_socket.close()
+    return True
 
 
 

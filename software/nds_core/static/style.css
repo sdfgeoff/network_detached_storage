@@ -3,12 +3,77 @@
   src: url("bedstead.otf") format("opentype");
 }
 
+/* COLOR SCHEME */
+:root {
+  --primary-highlight: white;
+  --primary: cyan;
+  --primary-dark: #033;
+  --primary-background: #000;
+  --error: red;
+  --error-dark: #500;
+  --warning: #FA0;
+  --warning-dark: #520;
+}
+
+
+.primary {
+  --dark: var(--primary-dark);
+  --col: var(--primary);
+  --highlight: var(--primary-highlight);
+  --background: var(--primary-background);
+
+  color: var(--col)
+}
+
+.error {
+  --dark: var(--error-dark);
+  --col: var(--error);
+  --highlight: var(--primary-highlight);
+  --background: var(--primary-background);
+
+  color: var(--col)
+}
+
+.warning {
+  --dark: var(--warning-dark);
+  --col: var(--warning);
+  --highlight: var(--primary-highlight);
+  --background: var(--primary-background);
+
+  color: var(--col)
+}
+
+/* BASE ELEMENTS */
 body {
   font-family: 'bedstead';
-  color: cyan;
-  background: black;
+  color: var(--primary);
+  background: var(--primary-background);
   margin: 0;
 }
+
+a {
+  color: var(--col);
+}
+a:hover {
+  color: var(--highlight);
+}
+
+input[type=submit],
+button {
+  display: inline-block;
+  font-family: 'bedstead';
+  padding: 0.5em 2em;
+  color: var(--background);
+  background: var(--col);
+  border: none;
+}
+input[type=submit]:hover,
+button:hover {
+  background: var(--highlight);
+}
+
+/* Custom Elements */
+
 
 .overall {
   display: flex;
@@ -22,6 +87,7 @@ body {
   margin-left: auto;
   margin-right: auto;
   padding: 1em;
+  background: var(--background);
 }
 
 .dialog h1 {
@@ -34,57 +100,42 @@ body {
   margin-right: auto;
 }
 
-input {
-  border: none;
-  border-top:1px solid #033 ;
-  border-left:1px solid #033 ;
-  border-right:1px solid #033 ;
-  border-bottom: 2px solid cyan;
-  background: black;
-  color: cyan;
+
+.singleLineInput {
+  border: 1px solid var(--dark);
+  border-bottom: 2px solid var(--col);
+  background: var(--background);
+  color: var(--col);
   font-family: 'bedstead';
   outline: none;
 }
 
-button.primary {
-  color: black;
-  background: cyan;
-  font-family: 'bedstead';
-  padding: 0.5em 2em;
-  border: none;
+input[type=submit].secondaryButton,
+button.secondaryButton {
+  color: var(--col);
+  background: var(--background);
+  border: solid 1px var(--col);
 }
-button.primary:hover {
-  background: white
-}
-
-button.secondary {
-  color: cyan;
-  background: black;
-  font-family: 'bedstead';
-  padding: 0.5em 2em;
-  border: 1px solid cyan;
-}
-button.secondary:hover {
-  color: white;
-  border: 1px solid white;
+input[type=submit].secondaryButton:hover,
+button.secondaryButton:hover {
+  color: var(--highlight);
+  background: var(--background);
+  border: solid 1px var(--highlight);
 }
 
 
-.borderStripedCyan {
-  border: 10px solid cyan;
-  border-image: repeating-linear-gradient( 45deg, cyan, cyan 1%, #033 1%, #033 8%) 10;
-}
-
-.borderStripedRed {
-  border: 10px solid cyan;
-  border-image: repeating-linear-gradient( 45deg, red, red 1%, #300 1%, #300 8%) 10;
+.borderStriped {
+  border: 10px solid var(--col);
+  border-image: repeating-linear-gradient( 45deg, var(--col), var(--col) 1%, var(--dark) 1%, var(--dark) 8%) 10;
 }
 
 
 .topbar {
   display: flex;
+  align-items: center;
   padding: 0.5em;
-  border-bottom: 1px solid #033;
+  border-bottom: 1px solid var(--dark);
+  background: var(--dark);
   gap: 0.5em;
 }
 .flex-spacer {
@@ -93,12 +144,65 @@ button.secondary:hover {
 
 .bottombar {
   padding: 0.5em;
-  border-top: 1px solid #033;
+  border-top: 1px solid var(--dark);
 }
 
-a {
-  color: cyan;
+
+.darkBack {
+  background-color: var(--dark);
 }
-a:hover {
-  color: white;
+
+.thread {
+  max-width: 50em;
+  margin: auto;
+  padding: 3em 0;
+}
+.thread .post {
+  display: flex;
+  flex-direction: column;
+
+  --col: rgb(
+    calc(var(--red) * 0.75 + 192),
+    calc(var(--green) * 0.75 + 192),
+    calc(var(--blue) * 0.75 + 192)
+  );
+  --background: rgb(
+    calc(var(--red) * 0.1),
+    calc(var(--green) * 0.1),
+    calc(var(--blue) * 0.1)
+  );
+  --dark: rgb(
+    calc(var(--red) * 0.2 + 32),
+    calc(var(--green) * 0.2 + 32),
+    calc(var(--blue) * 0.2 + 32)
+  );
+
+  background: var(--background);
+  color: var(--col);
+}
+.thread .post .bar {
+  display: flex;
+  flex-direction: row;
+  background: var(--dark);
+  font-weight: bold;
+  padding: 0.5em 1em;
+}
+
+.thread .post .bar .date {
+  color: var(--background);
+}
+
+.thread .post .content {
+  padding: 0 1em;
+}
+
+.thread .title {
+  padding: 1em 0.5em;
+  flex-direction: row;
+  font-size: 120%;
+  font-weight: bold;
+  
+  color: var(--dark);
+  background: var(--col);
+  text-align: center;
 }

@@ -6,33 +6,63 @@
 <body>
 <div class="overall">
 
-    <div class="topbar">
-        <button class="primary">Home</button>
-        <button class="secondary">Storage</button>
-        <button class="secondary">Messaging</button>
+    
+    <form class="topbar primary">
+        <input type="submit" formaction="/index.html" value="NDS Core 12" />
+        <input type="submit" formaction="/storage.html" value="Storage" class="secondaryButton"/>
         <div class="flex-spacer"></div>
-        <button class="secondary">UserInfo</button>
-    </div>
+        TOPIC: Is This Thing On?
+        <div class="flex-spacer"></div>
+        <input type="submit" formaction="/settings.html" value="Settings" class="secondaryButton"/>
+    </form>
 
     <div class="flex-spacer"></div>
 
-    <div class="dialog borderStripedRed">
-        <h1>NDS Unit 12</h1>
-        <div>
-            <table>
-                <tbody>
-                    <tr><td>User:</td><td><input></td></tr>
-                    <tr><td>AccessCode:</td><td><input type="password"></td></tr>
-                </tbody>
-            </table>
+    <div class="thread primary">
+        <!-- <div class="title">
+            <div class="name">Test Thread: Is this thing on?</div>
+        </div> -->
+        <div class="post" style="--red: 0; --green: 255; --blue: 0;">
+            <div class="bar">
+                <div class="author">Sdfgeoff</div>
+                <div class="flex-spacer"></div>
+                <div class="date">2022-09-10 22:31:56</div>
+            </div>
+            <div class="content">
+                <p>
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur feugiat ex augue, at mattis arcu placerat non. <a href="/asdf">Test</a> Quisque vel volutpat tortor, convallis convallis est. Fusce consequat velit eget volutpat sodales. Maecenas vitae est sit amet orci pharetra dignissim eu varius dui. Curabitur finibus tortor et neque pellentesque, vel elementum felis pellentesque. Integer eu nisl lobortis nulla scelerisque blandit vitae vitae felis. Vivamus lobortis feugiat ultrices. Nullam orci nisl, gravida dapibus est in, egestas finibus nunc. Sed vulputate elementum diam, et finibus metus vestibulum commodo. Cras ipsum nisl, semper eu consectetur eget, tincidunt vel dolor.
+                </p>   
+            </div>
         </div>
-        <div style="padding-top: 1em">
-            <button class="secondary">Create Account</button>
-            <button class="primary">Login</button>
+        <div class="post" style="--red: 0; --green: 0; --blue: 255;">
+            <div class="bar">
+                <div class="author">Bruce</div>
+                <div class="flex-spacer"></div>
+                <div class="date">2022-09-10 22:39:45</div>
+            </div>
+            <div class="content">
+                <p>
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur feugiat ex augue, at mattis arcu placerat non. Quisque vel volutpat tortor, convallis convallis est. Fusce consequat velit eget volutpat sodales. Maecenas vitae est sit amet orci pharetra dignissim eu varius dui. Curabitur finibus tortor et neque pellentesque, vel elementum felis pellentesque. Integer eu nisl lobortis nulla scelerisque blandit vitae vitae felis. Vivamus lobortis feugiat ultrices. Nullam orci nisl, gravida dapibus est in, egestas finibus nunc. Sed vulputate elementum diam, et finibus metus vestibulum commodo. Cras ipsum nisl, semper eu consectetur eget, tincidunt vel dolor.
+                </p>
+                <p>
+                    Phasellus ac orci eu sapien aliquam condimentum eget at eros. In metus ex, fermentum quis nisl vitae, vehicula porta nisi. In in massa ac diam mattis fringilla eget eu justo. Nunc vehicula massa vehicula magna auctor, in consequat velit suscipit. Ut dignissim sit amet quam id consectetur. Aliquam feugiat ligula at neque aliquam varius. Duis ac vulputate nulla. Integer molestie suscipit diam vel aliquet. Mauris sodales ipsum vitae tincidunt vestibulum. Aenean condimentum lectus orci, ac semper sem aliquam eu. Donec sed nisl consequat, dictum lorem tempus, auctor enim. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Integer accumsan tortor in metus sodales gravida. Curabitur enim ligula, sollicitudin quis nunc eget, rhoncus elementum libero.
+                </p>      
+            </div>
+        </div>
+        <div class="post" style="--red: 128; --green: 128; --blue: 0;">
+            <div class="bar">
+                <div class="author">Me</div>
+                <div class="flex-spacer"></div>
+                <div class="date">2022-09-10 22:39:45</div>
+            </div>
+            <div class="content">
+                <p>
+                    Ut malesuada leo vulputate velit pharetra, eget semper enim placerat. Suspendisse arcu libero, sollicitudin sit amet consequat vitae, commodo eu magna. Vestibulum ultrices convallis tellus ac tristique. Nam pharetra nulla in lorem dictum, in ullamcorper nisi mattis. Duis convallis semper augue, vel fermentum orci semper id. Integer sagittis erat eu nunc hendrerit, at fermentum dui molestie. Phasellus auctor porttitor lacus, in laoreet odio porta a. Proin et ligula neque. Cras euismod placerat elit, non commodo lorem vehicula non. Sed elementum ante odio, in sagittis erat tempus volutpat. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum nunc felis, aliquet non augue at, efficitur egestas dui. Morbi in ante lacinia, gravida velit a, ullamcorper ipsum. Aliquam ornare sit amet metus vel ultrices. Maecenas auctor ultrices libero faucibus efficitur.
+                </p>          
+            </div>
         </div>
     </div>
 
-    <div class="flex-spacer"></div>
 
     <div class="bottombar">
         This is a self-hosting storage server separated from the internet. The only
@@ -40,9 +70,6 @@
         network. For more information connect to the internet and visit the project
         <a href="https://hackaday.io/project/186933-network-detached-storage-device/">build log</a>.
     </div>
-
-
-
 </div>
 </body>
 </html>

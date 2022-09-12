@@ -1,17 +1,25 @@
 from . import routes
 from .config import config, _Config
+import time
 
-from .webserver import create_http_socket, serve_page
+from .webserver import create_http_socket, serve_page, HTTPRequest, HTTPResponse
 from .routes import handle_route_request
+from .storage import Storage
 
 
 
 
 def run(server_config: _Config) -> None:
     http_socket = create_http_socket(server_config)
+    storage = Storage("testdb.db")
+
+    def route_handler(request: HTTPRequest) -> HTTPResponse:
+        return handle_route_request(storage, request)
 
     while 1:
-        serve_page(server_config, http_socket, handle_route_request)
+        served_client = serve_page(server_config, http_socket, route_handler)
+        if not served_client:
+            time.sleep(0.1)  # TODO: base this on if a request was served or not
 
 
 if __name__ == "__main__":
