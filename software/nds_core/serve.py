@@ -7,8 +7,6 @@ from .routes import handle_route_request
 from .storage import Storage
 
 
-
-
 def run(server_config: _Config) -> None:
     with HttpSocket(server_config) as http_socket:
         storage = Storage("testdb.db")
