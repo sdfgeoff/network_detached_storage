@@ -45,6 +45,12 @@ class UserData:
         self.secret = secret
 
 
+class UserNameAlreadyExists(Exception):
+    user_name: str
+    def __init__(self, user_name: str):
+        self.user_name = user_name
+
+
 class Storage:
     connection: sqlite3.Connection
 
@@ -57,21 +63,26 @@ class Storage:
 
     def create_user(self, user_name: str, secret: str) -> int:
         cur = self.connection.cursor()
-        cur.execute(
-            """
-            INSERT INTO 
-                user (user_name, secret) 
-            VALUES 
-                (:user_name, :secret)
-            RETURNING user_id
-            """,
-            {"user_name": user_name, "secret": secret}
-        )
-        user_id = cur.fetchone()[0]
+        try:
+            cur.execute(
+                """
+                INSERT INTO 
+                    user (user_name, secret) 
+                VALUES 
+                    (:user_name, :secret)
+                RETURNING user_id
+                """,
+                {"user_name": user_name, "secret": secret}
+            )
+        except sqlite3.IntegrityError as err:
+            if err.args[0] == 'UNIQUE constraint failed: user.user_name':
+                raise UserNameAlreadyExists(user_name=user_name)
+            raise err from err
+        user_id = int(cur.fetchone()[0])
         self.connection.commit()
         return user_id
 
-    def query_users_by_ids(self, user_ids: Tuple[int]) -> List[UserData]:
+    def query_users_by_ids(self, user_ids: List[int]) -> List[UserData]:
         cur = self.connection.cursor()
         cur.execute(
             """
@@ -94,20 +105,28 @@ class Storage:
             ) for r in rows
         ]
 
-    def update_user(self, user_data: UserData):
+    def update_user(self, user_data: UserData) -> None:
         cur = self.connection.cursor()
-        cur.execute(
-            """
-            UPDATE 
-                user
-            SET
-                user_name=:user_name,
-                secret=:secret
-            WHERE 
-                user_id=:user_id
-            """,
-            {"user_name": user_data.user_name, "secret": user_data.secret, "user_id": user_data.user_id}
-        )
+        try:
+            cur.execute(
+                """
+                UPDATE 
+                    user
+                SET
+                    user_name=:user_name,
+                    secret=:secret
+                WHERE 
+                    user_id=:user_id
+                """,
+                {"user_name": user_data.user_name, "secret": user_data.secret, "user_id": user_data.user_id}
+            )
+        except sqlite3.IntegrityError as err:
+            if err.args[0] == 'UNIQUE constraint failed: user.user_name':
+                raise UserNameAlreadyExists(user_name=user_data.user_name) from err
+            raise err from err
+            
+
+        self.connection.commit()
             
 
     def thread_by_id(self, thead_id: int) -> Thread:
@@ -171,7 +190,7 @@ def _upgrade_v1_to_v2(connection: sqlite3.Connection) -> None:
         BEGIN;
         CREATE TABLE user (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            user_name TEXT,
+            user_name TEXT NOT NULL UNIQUE,
             secret BLOB
         );
         CREATE TABLE post (
@@ -188,7 +207,7 @@ def _upgrade_v1_to_v2(connection: sqlite3.Connection) -> None:
         );
         CREATE TABLE thread (
             thread_id INTEGER PRIMARY KEY,
-            title TEXT
+            title TEXT NOTE NULL
         );
         CREATE TABLE post_thread (
             post_id INTEGER KEY,
@@ -223,7 +242,7 @@ def _upgrade_v1_to_v2(connection: sqlite3.Connection) -> None:
 
 
 
-def _ensure_db_up_to_date(connection: sqlite3.Connection):
+def _ensure_db_up_to_date(connection: sqlite3.Connection) -> None:
     current_version = _get_db_version(connection)
         
     versions = [

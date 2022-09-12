@@ -38,20 +38,25 @@ class HTTPResponse:
         self.headers = headers
 
 
-def create_http_socket(server_config: _Config) -> socket.socket:
-    '''Creates a TCP socket to be used for servicing HTTP requests'''
-    http_socket = socket.socket()
-    http_socket.bind(('0.0.0.0', server_config.WEBSERVER_PORT))
-    
-    # Allow reuse
-    http_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    http_socket.listen(1)
-    http_socket.settimeout(0)
+class HttpSocket:
+    http_socket: Optional[socket.socket]
+    def __init__(self, server_config: _Config):
+        self.server_config = server_config
 
-    return http_socket
+    def __enter__(self) -> socket.socket:
+        self.http_socket = socket.socket()
+        self.http_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
+        self.http_socket.bind(('0.0.0.0', self.server_config.WEBSERVER_PORT))
 
+        self.http_socket.listen(1)
+        self.http_socket.settimeout(0)
+        return self.http_socket
+
+    def __exit__(self, exception_type: str, exception_value: str, traceback: str) -> None:
+        if self.http_socket is not None:
+            self.http_socket.close()
 
 
 def parse_method(raw: bytes) -> Methods:
@@ -71,7 +76,10 @@ def parse_method(raw: bytes) -> Methods:
 def parse_request(raw: bytes) -> Optional[HTTPRequest]:
     """ Extracts a HTTP request from raw bytes """
     try:
-        lines = raw.split(b'\n')
+        header, content = raw.split(b'\r\n\r\n', maxsplit=1)
+        lines = header.split(b'\r\n')
+        
+
         method_raw, url_raw, protocol = lines[0].strip().split(b' ')
         headers: Headers = [ 
             tuple(l.strip().split(b':', maxsplit=1)) # type: ignore # Mypy can't tell about the maxsplit
@@ -88,6 +96,8 @@ def parse_request(raw: bytes) -> Optional[HTTPRequest]:
             key = spl[0]
             val = spl[1] if len(spl) > 1 else ''
             query_params.append((key, val))
+
+        #print(lines)
     except Exception as err:
         log.warn("failed_parsing_request", {"exception": str(err)})
 
@@ -96,7 +106,7 @@ def parse_request(raw: bytes) -> Optional[HTTPRequest]:
         method=method, 
         url=url, 
         headers=headers ,
-        content=b"",
+        content=content,
         query_params=query_params
     )
 
@@ -130,7 +140,7 @@ def send_response_bytes(server_config: _Config, client_socket: socket.socket, pa
 def encode_page(response: HTTPResponse) -> bytes:
     status_line = f"HTTP/1.1 {response.status_code} {STATUS_CODE_TO_REASON[response.status_code]}".encode('utf-8')
     headers = b'\n'.join(a+b': '+b for a,b in response.headers)
-    return status_line + b'\r\n' + headers + b'\r\n' + response.data
+    return status_line + b'\r\n' + headers + b'\r\n\r\n' + response.data
 
 
 

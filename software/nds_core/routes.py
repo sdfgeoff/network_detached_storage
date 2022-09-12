@@ -48,6 +48,8 @@ def handle_route_request(storage: Storage, page_request: HTTPRequest) -> HTTPRes
                 (b"Location", b"/index.html")
             ]
         )
+
+    # Status Pages
     if page_request_str == "/404.html":
         return HTTPResponse(
             status_code=404,
@@ -63,12 +65,26 @@ def handle_route_request(storage: Storage, page_request: HTTPRequest) -> HTTPRes
             status_code=500,
             data=wrapContent("INTERNAL FAULT", openFragment('500.html'))
         )
+
+    # Dynamic Routes
     if page_request_str.startswith("/threads/"):
         thread = storage.thread_by_id(0) # TODO: parse thread ID
         return HTTPResponse(
             status_code=200,
             data=format_thread(thread)  
         )
+    if page_request_str == "/login.html":
+        return HTTPResponse(
+            status_code=200,
+            data=wrapContent("LOG IN", openFragment('loginDialog.html'))
+        )
+    if page_request.method == "POST" and page_request_str == "/user/create.html":
+        print(page_request.content)
+        return HTTPResponse(
+            status_code=200,
+            data=b'Test'
+        )
+
 
 
     if page_request_str == "/debug":
@@ -79,7 +95,9 @@ def handle_route_request(storage: Storage, page_request: HTTPRequest) -> HTTPRes
     if page_request_str[1:] in os.listdir(STATIC_DIR):
         return HTTPResponse(
             status_code=200,
-            headers=[],
+            headers=[
+                (b"Cache-Control", b"max-age=3600")
+            ],
             data=openStatic(page_request_str[1:])
         )
 

@@ -1,0 +1,6 @@
+[tool.mypy]
+strict=true
+
+
+[tool.pytest.ini_options]
+addopts = "--cov=nds_core --cov-report xml"
