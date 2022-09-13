@@ -44,12 +44,12 @@ def test_upgrades_all() -> None:
 
 def test_can_create_user() -> None:
     storage = Storage(":memory:")
-    assert storage.create_user("testUser", "testSecret") == 1
-    assert storage.create_user("testUser2", "testSecret2") == 2
+    assert storage.create_user("testUser", b"testSecret") == 1
+    assert storage.create_user("testUser2", b"testSecret2") == 2
 
     assert storage.query_users_by_ids([1])[0].user_name == "testUser"
     assert storage.query_users_by_ids([2])[0].user_id == 2
-    assert storage.query_users_by_ids([2])[0].secret == "testSecret2"
+    assert storage.query_users_by_ids([2])[0].secret == b"testSecret2"
 
     assert len(storage.query_users_by_ids([1])) == 1
     assert len(storage.query_users_by_ids([1, 2])) == 2
@@ -58,28 +58,44 @@ def test_can_create_user() -> None:
 
 def test_can_update_user() -> None:
     storage = Storage(":memory:")
-    user_id = storage.create_user("testUser", "testSecret")
-    user_id2 = storage.create_user("testUser2", "testSecret2")
-    assert storage.query_users_by_ids([user_id])[0].secret == "testSecret"
+    user_id = storage.create_user("testUser", b"testSecret")
+    user_id2 = storage.create_user("testUser2", b"testSecret2")
+    assert storage.query_users_by_ids([user_id])[0].secret == b"testSecret"
     storage.update_user(
-        UserData(user_id=user_id, user_name="testUser", secret="newSecret")
+        UserData(user_id=user_id, user_name="testUser", secret=b"newSecret")
     )
-    assert storage.query_users_by_ids([user_id])[0].secret == "newSecret"
-    assert storage.query_users_by_ids([2])[0].secret == "testSecret2"
+    assert storage.query_users_by_ids([user_id])[0].secret == b"newSecret"
+    assert storage.query_users_by_ids([2])[0].secret == b"testSecret2"
 
 
 def test_cannot_create_duplicate_username() -> None:
     storage = Storage(":memory:")
-    user_id = storage.create_user("testUser", "testSecret")
+    user_id = storage.create_user("testUser", b"testSecret")
 
     # By Creating
     with pytest.raises(UserNameAlreadyExists):
-        storage.create_user("testUser", "testSecret2")
+        storage.create_user("testUser", b"testSecret2")
 
     # By Renaming
-    user_id2 = storage.create_user("testUser2", "testSecret")
+    user_id2 = storage.create_user("testUser2", b"testSecret")
 
     with pytest.raises(UserNameAlreadyExists):
         storage.update_user(
-            UserData(user_id=user_id2, user_name="testUser", secret="newSecret")
+            UserData(user_id=user_id2, user_name="testUser", secret=b"newSecret")
         )
+
+
+def test_query_user_by_name() -> None:
+    storage = Storage(":memory:")
+    user_1 = storage.create_user("testUser", b"testSecret")
+    user_2 = storage.create_user("testUser2", b"testSecret2")
+
+    u1 = storage.query_user_by_user_name("testUser")
+    assert u1 is not None
+    assert u1.user_id == user_1
+
+    u2 = storage.query_user_by_user_name("testUser2")
+    assert u2 is not None
+    assert u2.user_id == user_2
+
+    assert storage.query_user_by_user_name("asoiuqwer") == None

@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 from . import log
 
@@ -39,9 +39,9 @@ class Thread:
 class UserData:
     user_name: str
     user_id: int
-    secret: str
+    secret: bytes
 
-    def __init__(self, user_name: str, user_id: int, secret: str):
+    def __init__(self, user_name: str, user_id: int, secret: bytes):
         self.user_name = user_name
         self.user_id = user_id
         self.secret = secret
@@ -63,7 +63,7 @@ class Storage:
         self.connection = sqlite3.connect(path)
         _ensure_db_up_to_date(self.connection)
 
-    def create_user(self, user_name: str, secret: str) -> int:
+    def create_user(self, user_name: str, secret: bytes) -> int:
         cur = self.connection.cursor()
         try:
             cur.execute(
@@ -109,6 +109,30 @@ class Storage:
             )
             for r in rows
         ]
+
+    def query_user_by_user_name(self, user_name: str) -> Optional[UserData]:
+        cur = self.connection.cursor()
+        cur.execute(
+            """
+            SELECT
+                user_name, user_id, secret
+            FROM 
+                user
+            WHERE
+                user_name IS :user_name
+            """,
+            {"user_name": user_name},
+        )
+        row = cur.fetchone()
+
+        if row is None:
+            return None
+
+        return UserData(
+            user_name=row[0],
+            user_id=row[1],
+            secret=row[2],
+        )
 
     def update_user(self, user_data: UserData) -> None:
         cur = self.connection.cursor()
