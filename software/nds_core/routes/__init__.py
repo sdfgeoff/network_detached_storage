@@ -19,12 +19,12 @@ def handle_route_request(storage: Storage, page_request: HTTPRequest) -> HTTPRes
     """Converts the HTTP page request into a page string"""
 
     page_request_str = page_request.url
-
-    session_data = get_session_data(storage, page_request)
-    context = RequestContext(storage, page_request, session_data)
-
     for route in ROUTES:
-        if re.fullmatch(route, page_request.url):
+        reg_match = re.fullmatch(route, page_request.url)
+        if reg_match is not None:
+            session_data = get_session_data(storage, page_request)
+            context = RequestContext(storage, page_request, session_data, reg_match)
+
             return ROUTES[route](context)
 
     # Dynamic Routes

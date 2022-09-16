@@ -9,13 +9,19 @@ class RequestContext:
     storage: Storage
     request: HTTPRequest
     session: Optional[SessionData]
+    url_match: re.Match[str]
 
     def __init__(
-        self, storage: Storage, request: HTTPRequest, session: Optional[SessionData]
+        self,
+        storage: Storage,
+        request: HTTPRequest,
+        session: Optional[SessionData],
+        url_match: re.Match[str],
     ):
         self.storage = storage
         self.request = request
         self.session = session
+        self.url_match = url_match
 
 
 RouteHandler = Callable[[RequestContext], HTTPResponse]

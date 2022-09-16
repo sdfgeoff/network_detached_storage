@@ -17,7 +17,8 @@ def format_thread(context: RequestContext, thread: Thread) -> bytes:
     return wrapContent(context.session, context.request, thread.name, thread_str)
 
 
-@register_route(routes, r"/threads/\d/")
+@register_route(routes, r"/threads/(?P<thread_id>\d+)/")
 def request_thread(context: RequestContext) -> HTTPResponse:
-    thread = context.storage.thread_by_id(0)  # TODO: parse thread ID
+    thread_id = int(context.url_match.groupdict()["thread_id"])
+    thread = context.storage.thread_by_id(thread_id)  # TODO: parse thread ID
     return HTTPResponse(status_code=200, data=format_thread(context, thread))
