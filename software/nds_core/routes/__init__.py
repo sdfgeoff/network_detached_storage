@@ -18,11 +18,13 @@ ROUTES: RouteDict = {**route_simple.routes, **route_user.routes, **route_thread.
 def handle_route_request(storage: Storage, page_request: HTTPRequest) -> HTTPResponse:
     """Converts the HTTP page request into a page string"""
 
+    session_data = get_session_data(storage, page_request)
+
+
     page_request_str = page_request.url
     for route in ROUTES:
         reg_match = re.fullmatch(route, page_request.url)
         if reg_match is not None:
-            session_data = get_session_data(storage, page_request)
             context = RequestContext(storage, page_request, session_data, reg_match)
 
             return ROUTES[route](context)
