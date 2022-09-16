@@ -14,7 +14,7 @@ from .storage import (
 
 
 def test_create_storage() -> None:
-    s = Storage(":memory:")
+    Storage(":memory:")
 
 
 def test_empty_db_is_v_neg1() -> None:
@@ -67,12 +67,12 @@ def test_can_update_user() -> None:
         UserData(user_id=user_id, user_name="testUser", secret=b"newSecret")
     )
     assert storage.query_users_by_ids([user_id])[0].secret == b"newSecret"
-    assert storage.query_users_by_ids([2])[0].secret == b"testSecret2"
+    assert storage.query_users_by_ids([user_id2])[0].secret == b"testSecret2"
 
 
 def test_cannot_create_duplicate_username() -> None:
     storage = Storage(":memory:")
-    user_id = storage.create_user("testUser", b"testSecret")
+    storage.create_user("testUser", b"testSecret")
 
     # By Creating
     with pytest.raises(UserNameAlreadyExists):
@@ -100,7 +100,7 @@ def test_query_user_by_name() -> None:
     assert u2 is not None
     assert u2.user_id == user_2
 
-    assert storage.query_user_by_user_name("asoiuqwer") == None
+    assert storage.query_user_by_user_name("asoiuqwer") is None
 
 
 def test_create_session_for_user() -> None:

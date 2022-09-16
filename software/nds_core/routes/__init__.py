@@ -1,30 +1,18 @@
 import os
 from ..webserver import HTTPRequest, HTTPResponse
-from typing import Optional
 
 import re
 
-from .file_utils import wrapContent, openFragment, openStatic, STATIC_DIR
-from ..storage import Thread, Storage, SessionData
+from .file_utils import wrapContent, openStatic, STATIC_DIR
+from ..storage import Storage
 from ..session import get_session_data
 from . import route_simple
 from . import route_user
+from . import route_thread
 from .registry import RouteDict, RequestContext
 
 
-def format_thread(
-    session_data: Optional[SessionData], request: HTTPRequest, thread: Thread
-) -> bytes:
-    post = openFragment("post.html")
-    posts = "\n".join([post.format(POST=d) for d in thread.posts])
-
-    thread_template = openFragment("thread.html")
-    thread_str = thread_template.format(POSTS=posts)
-
-    return wrapContent(session_data, request, thread.name, thread_str)
-
-
-ROUTES: RouteDict = {**route_simple.routes, **route_user.routes}
+ROUTES: RouteDict = {**route_simple.routes, **route_user.routes, **route_thread.routes}
 
 
 def handle_route_request(storage: Storage, page_request: HTTPRequest) -> HTTPResponse:
@@ -47,14 +35,9 @@ def handle_route_request(storage: Storage, page_request: HTTPRequest) -> HTTPRes
                 session_data, page_request, "Home", "Construction in progress"
             ),
         )
-    if page_request_str.startswith("/threads/"):
-        thread = storage.thread_by_id(0)  # TODO: parse thread ID
-        return HTTPResponse(
-            status_code=200, data=format_thread(session_data, page_request, thread)
-        )
 
     if page_request_str == "/debug":
-        _a = 1 / 0
+        a = 1 / 0  # noqa
 
     # Look in static directory last
     if page_request_str[1:] in os.listdir(STATIC_DIR):

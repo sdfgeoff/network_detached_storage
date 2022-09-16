@@ -1,4 +1,4 @@
-all: test fmt
+all: test fmt lint
 
 test:
 	mypy nds_core
@@ -6,6 +6,9 @@ test:
 
 fmt:
 	black nds_core
+
+lint:
+	flake8
 
 serve:
 	python3 -m nds_core.serve

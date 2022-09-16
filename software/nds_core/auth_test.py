@@ -8,7 +8,7 @@ def test_encode_password_v1() -> None:
     assert validate_password_v1(b"testPasswor", res) is False
 
     # print(encode_password_v1(b"iwertoiu"))
-    secret = b'{"version": 1, "salt": "yjtNt3U3Az4iispaYzDX+uNgEYGBV9w/+l74IZUX1HY=", "secret": "DE1wKfI+dvuA43yeWq93vg2l7PtTHltyNGqjVvFCCjWLu9UopIcNNC0sR6nEoEOlnAJnQCsBS0J2sSgWSbyWug=="}'
+    secret = b'{"version": 1, "salt": "yjtNt3U3Az4iispaYzDX+uNgEYGBV9w/+l74IZUX1HY=", "secret": "DE1wKfI+dvuA43yeWq93vg2l7PtTHltyNGqjVvFCCjWLu9UopIcNNC0sR6nEoEOlnAJnQCsBS0J2sSgWSbyWug=="}'  # noqa
     assert validate_password_v1(b"iwertoiu", secret) is True
 
 
