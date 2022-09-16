@@ -1,6 +1,6 @@
 import sqlite3
-import os
 from typing import Tuple, List, Optional
+from datetime import datetime
 
 from . import log
 
@@ -47,11 +47,37 @@ class UserData:
         self.secret = secret
 
 
+class SessionData:
+    user_id: int
+    session_key: str
+    creation_date: datetime
+    expiry_date: datetime
+
+    def __init__(
+        self,
+        user_id: int,
+        session_key: str,
+        creation_date: datetime,
+        expiry_date: datetime,
+    ):
+        self.user_id = user_id
+        self.session_key = session_key
+        self.creation_date = creation_date
+        self.expiry_date = expiry_date
+
+
 class UserNameAlreadyExists(Exception):
     user_name: str
 
     def __init__(self, user_name: str):
         self.user_name = user_name
+
+
+class UserIDDoesNotExist(Exception):
+    user_id: int
+
+    def __init__(self, user_id: int):
+        self.user_id = user_id
 
 
 class Storage:
@@ -61,6 +87,7 @@ class Storage:
         log.info("opening_db", {"path": path})
 
         self.connection = sqlite3.connect(path)
+        self.connection.execute("PRAGMA foreign_keys = ON;")
         _ensure_db_up_to_date(self.connection)
 
     def create_user(self, user_name: str, secret: bytes) -> int:
@@ -68,9 +95,9 @@ class Storage:
         try:
             cur.execute(
                 """
-                INSERT INTO 
-                    user (user_name, secret) 
-                VALUES 
+                INSERT INTO
+                    user (user_name, secret)
+                VALUES
                     (:user_name, :secret)
                 RETURNING user_id
                 """,
@@ -90,7 +117,7 @@ class Storage:
             """
             SELECT
                 user_name, user_id, secret
-            FROM 
+            FROM
                 user
             WHERE
                 user_id IN ({})
@@ -116,7 +143,7 @@ class Storage:
             """
             SELECT
                 user_name, user_id, secret
-            FROM 
+            FROM
                 user
             WHERE
                 user_name IS :user_name
@@ -139,12 +166,12 @@ class Storage:
         try:
             cur.execute(
                 """
-                UPDATE 
+                UPDATE
                     user
                 SET
                     user_name=:user_name,
                     secret=:secret
-                WHERE 
+                WHERE
                     user_id=:user_id
                 """,
                 {
@@ -158,6 +185,87 @@ class Storage:
                 raise UserNameAlreadyExists(user_name=user_data.user_name) from err
             raise err from err
 
+        self.connection.commit()
+
+    def create_session_for_user(
+        self,
+        user_id: int,
+        session_key: str,
+        creation_date: datetime,
+        expiry_date: datetime,
+    ) -> None:
+        cur = self.connection.cursor()
+        try:
+            cur.execute(
+                """
+                INSERT INTO
+                    session (user_id, session_key, creation_date, expiry_date)
+                VALUES
+                    (:user_id, :session_key, :creation_date, :expiry_date)
+                """,
+                {
+                    "user_id": user_id,
+                    "session_key": session_key,
+                    "creation_date": creation_date.isoformat(),
+                    "expiry_date": expiry_date.isoformat(),
+                },
+            )
+            self.connection.commit()
+        except sqlite3.IntegrityError as err:
+            if err.args[0] == "FOREIGN KEY constraint failed":
+                raise UserIDDoesNotExist(user_id=user_id)
+            raise err from err
+
+    def get_session_by_key(self, session_key: str) -> Optional[SessionData]:
+        cur = self.connection.cursor()
+        cur.execute(
+            """
+            SELECT
+                user_id, creation_date, expiry_date
+            FROM
+                session
+            WHERE
+                session_key=:session_key;
+            """,
+            {"session_key": session_key},
+        )
+        data = cur.fetchone()
+        if data is None:
+            return None
+        return SessionData(
+            user_id=data[0],
+            session_key=session_key,
+            creation_date=datetime.fromisoformat(data[1]),
+            expiry_date=datetime.fromisoformat(data[2]),
+        )
+
+    def delete_session_by_key(self, session_key: str) -> None:
+        cur = self.connection.cursor()
+        cur.execute(
+            """
+            DELETE
+            FROM
+                session
+            WHERE
+                session_key=:session_key;
+            """,
+            {"session_key": session_key},
+        )
+        self.connection.commit()
+
+    def clear_sessions_by_date(self, expire_before: datetime) -> None:
+        cur = self.connection.cursor()
+        # ISO format dates string sort nicely....
+        cur.execute(
+            """
+            DELETE
+            FROM
+                session
+            WHERE
+                expiry_date < :expire_before;
+            """,
+            {"expire_before": expire_before.isoformat()},
+        )
         self.connection.commit()
 
     def thread_by_id(self, thead_id: int) -> Thread:
@@ -185,11 +293,11 @@ def _get_db_version(connection: sqlite3.Connection) -> int:
     try:
         cur.execute(
             """
-            SELECT 
+            SELECT
                 value
             FROM
                 metadata
-            WHERE 
+            WHERE
                 setting='db_version'
         """
         )
@@ -206,9 +314,9 @@ def _create_v1_db(connection: sqlite3.Connection) -> None:
     cur.execute("CREATE TABLE metadata (setting TEXT, value TEXT)")
     cur.execute(
         """
-        INSERT INTO 
-            metadata 
-        VALUES 
+        INSERT INTO
+            metadata
+        VALUES
             ('db_version', :version)
     """,
         {"version": 1},
@@ -222,18 +330,18 @@ def _upgrade_v1_to_v2(connection: sqlite3.Connection) -> None:
         """
         BEGIN;
         CREATE TABLE user (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_name TEXT NOT NULL UNIQUE,
             secret BLOB
         );
         CREATE TABLE post (
-            post_id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            content TEXT, 
-            post_date TEXT, 
+            post_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT,
+            post_date TEXT,
             edit_date TEXT
         );
         CREATE TABLE post_user (
-            user_id INTEGER KEY, 
+            user_id INTEGER KEY,
             post_id INTEGER KEY,
             FOREIGN KEY(user_id) REFERENCES user(user_id),
             FOREIGN KEY(post_id) REFERENCES post(post_id)
@@ -255,7 +363,7 @@ def _upgrade_v1_to_v2(connection: sqlite3.Connection) -> None:
             upload_date TEXT
         );
         CREATE TABLE file_user (
-            user_id INTEGER KEY, 
+            user_id INTEGER KEY,
             file_id INTEGER KEY,
             FOREIGN KEY(user_id) REFERENCES user(user_id),
             FOREIGN KEY(file_id) REFERENCES file(file_id)
@@ -267,10 +375,10 @@ def _upgrade_v1_to_v2(connection: sqlite3.Connection) -> None:
     cur.execute(
         """
         UPDATE
-            metadata 
-        SET 
-            value=:db_version 
-        WHERE 
+            metadata
+        SET
+            value=:db_version
+        WHERE
             setting='db_version'
     """,
         {"db_version": 2},
@@ -278,10 +386,52 @@ def _upgrade_v1_to_v2(connection: sqlite3.Connection) -> None:
     connection.commit()
 
 
+def _upgrade_v2_to_v3(connection: sqlite3.Connection) -> None:
+    cur = connection.cursor()
+    cur.executescript(
+        """
+        BEGIN;
+        CREATE TABLE session (
+            session_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            session_key TEXT NOT NULL,
+            creation_date TEXT,
+            expiry_date TEXT,
+            FOREIGN KEY(user_id) REFERENCES user(user_id)
+        );
+
+        CREATE INDEX
+            session_key_index
+        ON
+            session(session_key);
+
+        CREATE INDEX
+            user_name_index
+        ON
+            user(user_name);
+
+        COMMIT;
+    """
+    )
+
+    cur.execute(
+        """
+        UPDATE
+            metadata
+        SET
+            value=:db_version
+        WHERE
+            setting='db_version'
+    """,
+        {"db_version": 3},
+    )
+    connection.commit()
+
+
 def _ensure_db_up_to_date(connection: sqlite3.Connection) -> None:
     current_version = _get_db_version(connection)
 
-    versions = [_create_v1_db, _upgrade_v1_to_v2]
+    versions = [_create_v1_db, _upgrade_v1_to_v2, _upgrade_v2_to_v3]
 
     while current_version < len(versions):
         upgrade_function = versions[current_version]

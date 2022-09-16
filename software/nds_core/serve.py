@@ -1,4 +1,3 @@
-from . import routes
 from .config import config, _Config
 import time
 

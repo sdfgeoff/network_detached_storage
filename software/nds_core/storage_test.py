@@ -1,5 +1,6 @@
 import sqlite3
 import pytest
+import datetime
 from .storage import (
     Storage,
     _get_db_version,
@@ -8,6 +9,7 @@ from .storage import (
     _ensure_db_up_to_date,
     UserData,
     UserNameAlreadyExists,
+    UserIDDoesNotExist,
 )
 
 
@@ -39,7 +41,7 @@ def test_can_upgrade_to_v1() -> None:
 def test_upgrades_all() -> None:
     db = sqlite3.connect(":memory:")
     _ensure_db_up_to_date(db)
-    assert _get_db_version(db) == 2
+    assert _get_db_version(db) == 3
 
 
 def test_can_create_user() -> None:
@@ -99,3 +101,68 @@ def test_query_user_by_name() -> None:
     assert u2.user_id == user_2
 
     assert storage.query_user_by_user_name("asoiuqwer") == None
+
+
+def test_create_session_for_user() -> None:
+    storage = Storage(":memory:")
+
+    # Create for nonexistant user fails
+    with pytest.raises(UserIDDoesNotExist):
+        storage.create_session_for_user(
+            user_id=123,
+            session_key="asdfwargle",
+            creation_date=datetime.datetime.now(),
+            expiry_date=datetime.datetime.now(),
+        )
+
+    d1 = datetime.datetime.now()
+    d2 = d1 + datetime.timedelta(hours=1)
+
+    user_1 = storage.create_user("testUser", b"testSecret")
+    storage.create_session_for_user(
+        user_id=user_1,
+        session_key="asdfwargle",
+        creation_date=d1,
+        expiry_date=d2,
+    )
+
+    session_data = storage.get_session_by_key("asdfwargle")
+    assert session_data is not None
+    assert session_data.user_id == user_1
+    assert session_data.creation_date == d1
+    assert session_data.expiry_date == d2
+
+    # Fetch non-existant fails
+    session_data = storage.get_session_by_key("asdfwargle5")
+    assert session_data is None
+
+
+def test_delete_session_by_date() -> None:
+    storage = Storage(":memory:")
+
+    d1 = datetime.datetime.now()
+    d2 = d1 + datetime.timedelta(hours=1)
+    d3 = d1 + datetime.timedelta(hours=2)
+
+    user_1 = storage.create_user("testUser", b"testSecret")
+    storage.create_session_for_user(
+        user_id=user_1,
+        session_key="asdfwargle1",
+        creation_date=d1,
+        expiry_date=d1,
+    )
+    storage.create_session_for_user(
+        user_id=user_1,
+        session_key="asdfwargle2",
+        creation_date=d1,
+        expiry_date=d3,
+    )
+
+    storage.clear_sessions_by_date(d2)
+    # Should delete d1 but not d3
+
+    assert storage.get_session_by_key("asdfwargle1") is None
+    assert storage.get_session_by_key("asdfwargle2") is not None
+
+    storage.delete_session_by_key("asdfwargle2")
+    assert storage.get_session_by_key("asdfwargle2") is None

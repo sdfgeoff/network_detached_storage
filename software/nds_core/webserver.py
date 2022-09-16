@@ -1,6 +1,5 @@
 from typing import Optional, Literal, Callable, List, Tuple
 import socket
-import os
 import time
 from .config import _Config
 
@@ -91,8 +90,9 @@ def parse_request(raw: bytes) -> Optional[HTTPRequest]:
 
         method_raw, url_raw, protocol = lines[0].strip().split(b" ")
         headers: Headers = [
-            tuple([t.strip() for t in l.split(b":", maxsplit=1)])  # type: ignore # Mypy can't tell about the maxsplit
-            for l in lines[1:]
+            # Mypy can't tell about the maxsplit
+            tuple([t.strip() for t in line.split(b":", maxsplit=1)])  # type: ignore
+            for line in lines[1:]
         ]
 
         method = parse_method(method_raw)

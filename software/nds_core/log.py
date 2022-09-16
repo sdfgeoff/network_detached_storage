@@ -17,3 +17,7 @@ def warn(event: str, data: Dict[str, Any]) -> None:
 
 def error(event: str, data: Dict[str, Any]) -> None:
     _log("ERROR", event, data)
+
+
+def debug(event: str, data: Dict[str, Any]) -> None:
+    _log("DEBUG", event, data)
