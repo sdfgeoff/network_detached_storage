@@ -1,6 +1,9 @@
 import sqlite3
+import json
 from typing import Tuple, List, Optional
 from datetime import datetime
+from dataclasses import dataclass
+
 
 from . import log
 
@@ -35,35 +38,43 @@ class Thread:
         self.name = name
 
 
-# Actual Classes
+@dataclass
+class ColorData:
+    r: int
+    g: int
+    b: int
+
+    @classmethod
+    def from_hex(cls, hex: str) -> "ColorData":
+        """Converts a HEX code into RGB or HSL.
+        Args:
+            hx (str): Takes both short as well as long HEX codes.
+            hsl (bool): Converts the given HEX code into HSL value if True.
+        Return:
+            Tuple of length 3 consisting of either int or float values.
+        Raise:
+            ValueError: If given value is not a valid HEX code."""
+        return cls(r=int(hex[1:3], 16), g=int(hex[3:5], 16), b=int(hex[5:7], 16))
+
+    @property
+    def hex(self) -> str:
+        return f"#{self.r:02X}{self.g:02X}{self.b:02X}"
+
+
+@dataclass
 class UserData:
     user_name: str
     user_id: int
     secret: bytes
-
-    def __init__(self, user_name: str, user_id: int, secret: bytes):
-        self.user_name = user_name
-        self.user_id = user_id
-        self.secret = secret
+    color: ColorData
 
 
+@dataclass
 class SessionData:
     user_id: int
     session_key: str
     creation_date: datetime
     expiry_date: datetime
-
-    def __init__(
-        self,
-        user_id: int,
-        session_key: str,
-        creation_date: datetime,
-        expiry_date: datetime,
-    ):
-        self.user_id = user_id
-        self.session_key = session_key
-        self.creation_date = creation_date
-        self.expiry_date = expiry_date
 
 
 class UserNameAlreadyExists(Exception):
@@ -90,18 +101,22 @@ class Storage:
         self.connection.execute("PRAGMA foreign_keys = ON;")
         _ensure_db_up_to_date(self.connection)
 
-    def create_user(self, user_name: str, secret: bytes) -> int:
+    def create_user(self, user_name: str, secret: bytes, color: ColorData) -> int:
         cur = self.connection.cursor()
         try:
             cur.execute(
                 """
                 INSERT INTO
-                    user (user_name, secret)
+                    user (user_name, secret, color)
                 VALUES
-                    (:user_name, :secret)
+                    (:user_name, :secret, :color)
                 RETURNING user_id
                 """,
-                {"user_name": user_name, "secret": secret},
+                {
+                    "user_name": user_name,
+                    "secret": secret,
+                    "color": serialize_color(color),
+                },
             )
         except sqlite3.IntegrityError as err:
             if err.args[0] == "UNIQUE constraint failed: user.user_name":
@@ -116,7 +131,7 @@ class Storage:
         cur.execute(
             """
             SELECT
-                user_name, user_id, secret
+                user_name, user_id, secret, color
             FROM
                 user
             WHERE
@@ -130,11 +145,12 @@ class Storage:
 
         return [
             UserData(
-                user_name=r[0],
-                user_id=r[1],
-                secret=r[2],
+                user_name=row[0],
+                user_id=row[1],
+                secret=row[2],
+                color=parse_color(row[3]),
             )
-            for r in rows
+            for row in rows
         ]
 
     def query_user_by_user_name(self, user_name: str) -> Optional[UserData]:
@@ -142,7 +158,7 @@ class Storage:
         cur.execute(
             """
             SELECT
-                user_name, user_id, secret
+                user_name, user_id, secret, color
             FROM
                 user
             WHERE
@@ -156,9 +172,7 @@ class Storage:
             return None
 
         return UserData(
-            user_name=row[0],
-            user_id=row[1],
-            secret=row[2],
+            user_name=row[0], user_id=row[1], secret=row[2], color=parse_color(row[3])
         )
 
     def update_user(self, user_data: UserData) -> None:
@@ -170,7 +184,8 @@ class Storage:
                     user
                 SET
                     user_name=:user_name,
-                    secret=:secret
+                    secret=:secret,
+                    color=:color
                 WHERE
                     user_id=:user_id
                 """,
@@ -178,6 +193,7 @@ class Storage:
                     "user_name": user_data.user_name,
                     "secret": user_data.secret,
                     "user_id": user_data.user_id,
+                    "color": serialize_color(user_data.color),
                 },
             )
         except sqlite3.IntegrityError as err:
@@ -285,6 +301,23 @@ class Storage:
             ],
             name="Test Thread",
         )
+
+
+def parse_color(color: Optional[str]) -> ColorData:
+    if color is not None:
+        raw = json.loads(color)
+        return ColorData(r=raw.get("r", 0), g=raw.get("g", 0), b=raw.get("b", 0))
+    return ColorData(r=0, g=0, b=0)
+
+
+def serialize_color(color: ColorData) -> str:
+    return json.dumps(
+        {
+            "r": color.r,
+            "g": color.g,
+            "b": color.b,
+        }
+    )
 
 
 def _get_db_version(connection: sqlite3.Connection) -> int:
@@ -428,10 +461,37 @@ def _upgrade_v2_to_v3(connection: sqlite3.Connection) -> None:
     connection.commit()
 
 
+def _upgrade_v3_to_v4(connection: sqlite3.Connection) -> None:
+    cur = connection.cursor()
+    cur.executescript(
+        """
+        BEGIN;
+        ALTER TABLE
+            user
+        ADD
+            color TEXT;
+        COMMIT;
+    """
+    )
+
+    cur.execute(
+        """
+        UPDATE
+            metadata
+        SET
+            value=:db_version
+        WHERE
+            setting='db_version'
+    """,
+        {"db_version": 4},
+    )
+    connection.commit()
+
+
 def _ensure_db_up_to_date(connection: sqlite3.Connection) -> None:
     current_version = _get_db_version(connection)
 
-    versions = [_create_v1_db, _upgrade_v1_to_v2, _upgrade_v2_to_v3]
+    versions = [_create_v1_db, _upgrade_v1_to_v2, _upgrade_v2_to_v3, _upgrade_v3_to_v4]
 
     while current_version < len(versions):
         upgrade_function = versions[current_version]

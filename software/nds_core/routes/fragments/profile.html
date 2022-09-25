@@ -1,0 +1,22 @@
+<div class="flex-spacer"></div>
+
+<div class="dialog borderPlain dynColor" style="--red: {USER.color.r}; --green: {USER.color.g}; --blue: {USER.color.b};">
+    <h1>Profile Information</h1>
+    <form method="post">
+        <table>
+            <tbody>
+                <tr><td>UserId:</td><td><input name="user_name" type="text" class="singleLineInput" disabled value="{SESSION.user_id}" /></td></tr>
+                <tr><td>UserName:</td><td><input name="user_name" type="text" class="singleLineInput" required value="{USER.user_name}" /></td></tr>
+                <tr><td>AccessCode:</td><td><input name="password" type="password" class="singleLineInput" /></td></tr>
+                <tr><td>Color:</td><td><input name="color" type="color" class="singleLineInput" value="{USER.color.hex}" /></td></tr>
+            </tbody>
+        </table>
+        <div style="padding-top: 1em">
+            <input type="submit" value="Logout" formaction="/user/logout.html" class="secondaryButton" >
+            <input type="submit" value="Update Details" formaction="/user/update.html" class="secondaryButton" >
+        </div>
+    </form>
+</div>
+
+<div class="flex-spacer"></div>
+

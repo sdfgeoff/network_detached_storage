@@ -3,23 +3,28 @@ from ..webserver import HTTPRequest, HTTPResponse
 
 import re
 
-from .file_utils import wrapContent, openStatic, STATIC_DIR
+from .file_utils import openStatic, STATIC_DIR
 from ..storage import Storage
 from ..session import get_session_data
 from . import route_simple
 from . import route_user
 from . import route_thread
+from . import route_index
 from .registry import RouteDict, RequestContext
 
 
-ROUTES: RouteDict = {**route_simple.routes, **route_user.routes, **route_thread.routes}
+ROUTES: RouteDict = {
+    **route_simple.routes,
+    **route_user.routes,
+    **route_thread.routes,
+    **route_index.routes,
+}
 
 
 def handle_route_request(storage: Storage, page_request: HTTPRequest) -> HTTPResponse:
     """Converts the HTTP page request into a page string"""
 
     session_data = get_session_data(storage, page_request)
-
 
     page_request_str = page_request.url
     for route in ROUTES:
@@ -28,15 +33,6 @@ def handle_route_request(storage: Storage, page_request: HTTPRequest) -> HTTPRes
             context = RequestContext(storage, page_request, session_data, reg_match)
 
             return ROUTES[route](context)
-
-    # Dynamic Routes
-    if page_request_str == "/index.html":
-        return HTTPResponse(
-            status_code=200,
-            data=wrapContent(
-                session_data, page_request, "Home", "Construction in progress"
-            ),
-        )
 
     if page_request_str == "/debug":
         a = 1 / 0  # noqa
