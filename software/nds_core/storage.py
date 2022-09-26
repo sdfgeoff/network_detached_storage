@@ -392,7 +392,7 @@ class Storage:
                 ON thread.thread_id == post_thread.thread_id
 
             INNER JOIN post
-                ON post.post_id == post_thread.thread_id
+                ON post.post_id == post_thread.post_id
 
             INNER JOIN post_user
                 ON post_user.post_id == post.post_id
