@@ -1,3 +1,14 @@
-<div>
-    Test
-</div>
+<form method="post">
+    <div class="thread">
+        <div class="post dynColor" style="--red: {USER.color.r}; --green: {USER.color.g}; --blue: {USER.color.b};">
+            <div class="bar">
+                <div class="author">Title:</div>
+                <input name="thread_name" type="text" class="singleLineInput" required>
+                <input type="submit" formaction="/threads/create.html" value="Create" class="primaryButton"/>
+            </div>
+            <div class="content borderDim">
+                <textarea class="multiLineInput" name="thread_content"></textarea>
+            </div>
+        </div>
+    </div>
+</form>

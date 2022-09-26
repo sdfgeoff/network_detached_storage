@@ -1,10 +1,7 @@
 <div class="post dynColor" style="--red: {USER.color.r}; --green: {USER.color.g}; --blue: {USER.color.b};">
     <div class="bar">
-        <div class="author">{USER.user_name}</div>
+        <div class="author"><a href="/threads/{THREAD.thread_id}/">{USER.user_name}: {THREAD.title}</a></div>
         <div class="flex-spacer"></div>
-        <div class="date">{POST.post_date}</div>
-    </div>
-    <div class="content">
-        {POST.content}     
+        <div class="date">{THREAD.post_date}</div>
     </div>
 </div>

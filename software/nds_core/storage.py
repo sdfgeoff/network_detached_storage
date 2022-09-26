@@ -1,41 +1,11 @@
 import sqlite3
 import json
-from typing import Tuple, List, Optional
+from typing import List, Optional
 from datetime import datetime
 from dataclasses import dataclass
 
 
 from . import log
-
-
-# Temporary Classes
-class User:
-    name: str
-    color: Tuple[int, int, int]
-
-    def __init__(self, name: str, color: Tuple[int, int, int]):
-        self.name = name
-        self.color = color
-
-
-class Post:
-    content: str
-    user: User
-    post_date: str
-
-    def __init__(self, user: User, post_date: str, content: str):
-        self.user = user
-        self.post_date = post_date
-        self.content = content
-
-
-class Thread:
-    posts: List[Post]
-    name: str
-
-    def __init__(self, posts: List[Post], name: str):
-        self.posts = posts
-        self.name = name
 
 
 @dataclass
@@ -59,6 +29,23 @@ class ColorData:
     @property
     def hex(self) -> str:
         return f"#{self.r:02X}{self.g:02X}{self.b:02X}"
+
+
+@dataclass
+class ThreadData:
+    thread_id: int
+    title: str
+    user_id: int
+    post_date: datetime
+
+
+@dataclass
+class PostData:
+    user_id: int
+    post_id: int
+    content: str
+    post_date: datetime
+    edit_date: datetime
 
 
 @dataclass
@@ -89,6 +76,13 @@ class UserIDDoesNotExist(Exception):
 
     def __init__(self, user_id: int):
         self.user_id = user_id
+
+
+class ThreadIDDoesNotExist(Exception):
+    thread_id: int
+
+    def __init__(self, thread_id: int):
+        self.thread_id = thread_id
 
 
 class Storage:
@@ -284,23 +278,224 @@ class Storage:
         )
         self.connection.commit()
 
-    def thread_by_id(self, thead_id: int) -> Thread:
-        # TODO
-        return Thread(
-            posts=[
-                Post(
-                    user=User(name="sdfgeoff", color=(0, 255, 0)),
-                    post_date="2022-09-12 07:25:22",
-                    content="<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur feugiat ex augue, at mattis arcu placerat non. Quisque vel volutpat tortor, convallis convallis est. Fusce consequat velit eget volutpat sodales. Maecenas vitae est sit amet orci pharetra dignissim eu varius dui. Curabitur finibus tortor et neque pellentesque, vel elementum felis pellentesque. Integer eu nisl lobortis nulla scelerisque blandit vitae vitae felis. Vivamus lobortis feugiat ultrices. Nullam orci nisl, gravida dapibus est in, egestas finibus nunc. Sed vulputate elementum diam, et finibus metus vestibulum commodo. Cras ipsum nisl, semper eu consectetur eget, tincidunt vel dolor.</p>",  # noqa
-                ),
-                Post(
-                    user=User(name="Arg", color=(255, 255, 0)),
-                    post_date="2022-09-12 07:34:55",
-                    content="<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur feugiat ex augue, at mattis arcu placerat non. Quisque vel volutpat tortor, convallis convallis est. Fusce consequat velit eget volutpat sodales. Maecenas vitae est sit amet orci pharetra dignissim eu varius dui. Curabitur finibus tortor et neque pellentesque, vel elementum felis pellentesque. Integer eu nisl lobortis nulla scelerisque blandit vitae vitae felis. Vivamus lobortis feugiat ultrices. Nullam orci nisl, gravida dapibus est in, egestas finibus nunc. Sed vulputate elementum diam, et finibus metus vestibulum commodo. Cras ipsum nisl, semper eu consectetur eget, tincidunt vel dolor.</p>",  # noqa
-                ),
-            ],
-            name="Test Thread",
+    def create_thread(
+        self, post_date: datetime, user_id: int, title: str, initial_post_content: str
+    ) -> int:
+        cur = self.connection.cursor()
+        cur.execute("BEGIN;")
+
+        cur.execute(
+            """
+                INSERT INTO
+                    thread (title)
+                VALUES
+                    (:title)
+                RETURNING thread_id;
+            """,
+            {
+                "title": title,
+            },
         )
+        thread_id = int(cur.fetchone()[0])
+        _post_id = self._create_post_in_thread(
+            cur, user_id, thread_id, post_date, initial_post_content, 0
+        )
+
+        cur.execute("COMMIT;")
+
+        return thread_id
+
+    def create_post_in_thread(
+        self, user_id: int, thread_id: int, post_date: datetime, post_content: str
+    ) -> int:
+        cur = self.connection.cursor()
+        cur.execute("BEGIN;")
+        ordering = self._get_max_post_id(cur, thread_id) + 1
+        post_id = self._create_post_in_thread(
+            cur, user_id, thread_id, post_date, post_content, ordering
+        )
+        cur.execute("COMMIT;")
+        return post_id
+
+    def _get_max_post_id(self, cur: sqlite3.Cursor, thread_id: int) -> int:
+        cur.execute(
+            """
+            SELECT
+                MAX(ordering)
+            FROM
+                post_thread
+            WHERE
+                thread_id == :thread_id
+            """,
+            {"thread_id": thread_id},
+        )
+        res = cur.fetchone()[0]
+        if res is None:
+            raise ThreadIDDoesNotExist(thread_id)
+        return int(res)
+
+    def _create_post_in_thread(
+        self,
+        cur: sqlite3.Cursor,
+        user_id: int,
+        thread_id: int,
+        post_date: datetime,
+        post_content: str,
+        ordering: int,
+    ) -> int:
+        cur.execute(
+            """
+            INSERT INTO
+                post (post_date, edit_date, content)
+            VALUES
+                (:post_date, :post_date, :content)
+            RETURNING post_id
+            """,
+            {"post_date": post_date.isoformat(), "content": post_content},
+        )
+        post_id = int(cur.fetchone()[0])
+
+        cur.execute(
+            """
+            INSERT INTO
+                post_user (post_id, user_id)
+            VALUES
+                (:post_id, :user_id);
+            """,
+            {"post_id": post_id, "user_id": user_id},
+        )
+        cur.execute(
+            """
+            INSERT INTO
+                post_thread (post_id, thread_id, ordering)
+            VALUES
+                (:post_id, :thread_id, :ordering);
+            """,
+            {
+                "post_id": post_id,
+                "thread_id": thread_id,
+                "ordering": ordering,
+            },
+        )
+        return post_id
+
+    def query_threads(self, limit: int, offset: int) -> List[ThreadData]:
+        cur = self.connection.cursor()
+        cur.execute(
+            """
+            SELECT
+                thread.thread_id, thread.title, post_user.user_id, post.post_date
+            FROM
+                thread
+
+            INNER JOIN post_thread
+                ON thread.thread_id == post_thread.thread_id
+
+            INNER JOIN post
+                ON post.post_id == post_thread.thread_id
+
+            INNER JOIN post_user
+                ON post_user.post_id == post.post_id
+
+            WHERE
+                post_thread.ordering == 0
+
+            ORDER BY
+                thread.thread_id
+            LIMIT :limit
+            OFFSET :offset
+            """,
+            {"limit": limit, "offset": offset},
+        )
+        rows = cur.fetchall()
+
+        return [
+            ThreadData(
+                thread_id=row[0],
+                title=row[1],
+                user_id=row[2],
+                post_date=datetime.fromisoformat(row[3]),
+            )
+            for row in rows
+        ]
+
+    def query_thread_by_id(self, thread_id: int) -> Optional[ThreadData]:
+        cur = self.connection.cursor()
+        cur.execute(
+            """
+            SELECT
+                thread.thread_id, thread.title, post_user.user_id, post.post_date
+            FROM
+                thread
+
+            INNER JOIN post_thread
+                ON thread.thread_id == post_thread.thread_id
+
+            INNER JOIN post
+                ON post.post_id == post_thread.thread_id
+
+            INNER JOIN post_user
+                ON post_user.post_id == post.post_id
+
+            WHERE
+                post_thread.ordering == 0
+                AND thread.thread_id == :thread_id
+
+            """,
+            {"thread_id": thread_id},
+        )
+        rows = cur.fetchall()
+
+        assert len(rows) <= 1
+        if len(rows) == 0:
+            return None
+
+        row = rows[0]
+        return ThreadData(
+            thread_id=row[0],
+            title=row[1],
+            user_id=row[2],
+            post_date=datetime.fromisoformat(row[3]),
+        )
+
+    def query_posts_by_thread_id(
+        self, thread_id: int, limit: int, offset: int
+    ) -> List[PostData]:
+        cur = self.connection.cursor()
+        cur.execute(
+            """
+            SELECT
+                post_user.user_id, post.post_id, post.content, post.post_date, post.edit_date
+            FROM
+                post
+
+            INNER JOIN post_thread
+                ON post_thread.post_id == post.post_id
+            INNER JOIN post_user
+                on post_user.post_id == post.post_id
+
+            WHERE
+                post_thread.thread_id == :thread_id
+
+            ORDER BY
+               ordering
+            LIMIT :limit
+            OFFSET :offset
+            """,
+            {"thread_id": thread_id, "limit": limit, "offset": offset},
+        )
+        rows = cur.fetchall()
+
+        return [
+            PostData(
+                user_id=row[0],
+                post_id=row[1],
+                content=row[2],
+                post_date=datetime.fromisoformat(row[3]),
+                edit_date=datetime.fromisoformat(row[4]),
+            )
+            for row in rows
+        ]
 
 
 def parse_color(color: Optional[str]) -> ColorData:

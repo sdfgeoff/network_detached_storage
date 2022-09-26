@@ -145,6 +145,21 @@ button.secondaryButton:hover {
   border: solid 1px var(--highlight);
 }
 
+.multiLineInput {
+  border: 2px solid var(--background);
+  resize: vertical;
+  background: var(--background);
+  color: var(--col);
+  font-family: 'bedstead';
+  outline: none;
+  width: 100%;
+  min-height: 20em;
+}
+
+.borderDim {
+  border: 2px solid var(--dark);
+
+}
 
 .borderStriped {
   border: 10px solid var(--col);
@@ -204,6 +219,7 @@ button.secondaryButton:hover {
   background: var(--dark);
   font-weight: bold;
   padding: 0.5em 1em;
+  align-items: center;
 }
 
 .thread .post .bar .date {

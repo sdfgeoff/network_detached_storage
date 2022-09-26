@@ -29,9 +29,12 @@ def create_user(context: RequestContext) -> HTTPResponse:
     )
 
     return HTTPResponse(
-        status_code=200,
+        status_code=302,
         data=f"Created User {user_id}".encode("utf-8"),
-        headers=[create_session_header(context.storage, user_id)],
+        headers=[
+            create_session_header(context.storage, user_id),
+            (b"Location", b"/index.html"),
+        ],
     )
 
 
@@ -47,7 +50,6 @@ def update_user(context: RequestContext) -> HTTPResponse:
     current_userdata = context.storage.query_users_by_ids([user_id])[0]
 
     user_data = urllib.parse.parse_qs(context.request.content)
-    print(user_data)
     user_name = next(iter(user_data.get(b"user_name", [])), None)
     password = next(iter(user_data.get(b"password", [])), None)
     color = next(iter(user_data.get(b"color", [])), None)

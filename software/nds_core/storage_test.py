@@ -10,7 +10,10 @@ from .storage import (
     UserData,
     UserNameAlreadyExists,
     UserIDDoesNotExist,
+    ThreadIDDoesNotExist,
     ColorData,
+    ThreadData,
+    PostData,
 )
 
 
@@ -186,3 +189,172 @@ def test_parse_hex() -> None:
     assert ColorData.from_hex("#111213") == ColorData(r=17, g=18, b=19)
     assert ColorData(r=17, g=18, b=19).hex == "#111213"
     assert ColorData(r=1, g=2, b=3).hex == "#010203"
+
+
+def test_create_thread() -> None:
+    storage = Storage(":memory:")
+    d1 = datetime.datetime.now()
+
+    user_id = storage.create_user("testUser", b"testSecret", ColorData(0, 0, 0))
+
+    thread_id_1 = storage.create_thread(
+        d1, user_id, "The First Thread", "Contents of first post"
+    )
+    thread_id_2 = storage.create_thread(
+        d1, user_id, "The Second Thread", "Contents of second post"
+    )
+    thread_id_3 = storage.create_thread(
+        d1, user_id, "The Third Thread", "Contents of third post"
+    )
+
+    # Create a couple posts
+    _post_id_1_1 = storage.create_post_in_thread(
+        user_id, thread_id_1, d1, "Thread1 Post2"
+    )
+    _post_id_1_2 = storage.create_post_in_thread(
+        user_id, thread_id_1, d1, "Thread1 Post3"
+    )
+    _post_id_2_1 = storage.create_post_in_thread(
+        user_id, thread_id_2, d1, "Thread2 Post2"
+    )
+
+    assert storage.query_threads(3, 0) == [
+        ThreadData(
+            thread_id=thread_id_1,
+            title="The First Thread",
+            user_id=user_id,
+            post_date=d1,
+        ),
+        ThreadData(
+            thread_id=thread_id_2,
+            title="The Second Thread",
+            user_id=user_id,
+            post_date=d1,
+        ),
+        ThreadData(
+            thread_id=thread_id_3,
+            title="The Third Thread",
+            user_id=user_id,
+            post_date=d1,
+        ),
+    ]
+    assert storage.query_threads(2, 0) == [
+        ThreadData(
+            thread_id=thread_id_1,
+            title="The First Thread",
+            user_id=user_id,
+            post_date=d1,
+        ),
+        ThreadData(
+            thread_id=thread_id_2,
+            title="The Second Thread",
+            user_id=user_id,
+            post_date=d1,
+        ),
+    ]
+    assert storage.query_threads(2, 1) == [
+        ThreadData(
+            thread_id=thread_id_2,
+            title="The Second Thread",
+            user_id=user_id,
+            post_date=d1,
+        ),
+        ThreadData(
+            thread_id=thread_id_3,
+            title="The Third Thread",
+            user_id=user_id,
+            post_date=d1,
+        ),
+    ]
+    assert storage.query_threads(5, 1) == [
+        ThreadData(
+            thread_id=thread_id_2,
+            title="The Second Thread",
+            user_id=user_id,
+            post_date=d1,
+        ),
+        ThreadData(
+            thread_id=thread_id_3,
+            title="The Third Thread",
+            user_id=user_id,
+            post_date=d1,
+        ),
+    ]
+
+    assert storage.query_thread_by_id(thread_id_1) == ThreadData(
+        thread_id=thread_id_1,
+        title="The First Thread",
+        user_id=user_id,
+        post_date=d1,
+    )
+
+
+def test_post_on_thread() -> None:
+    storage = Storage(":memory:")
+    d1 = datetime.datetime.now()
+
+    user_id_1 = storage.create_user("testUser", b"testSecret", ColorData(0, 0, 0))
+    user_id_2 = storage.create_user("testUser2", b"testSecret", ColorData(0, 0, 0))
+
+    thread_id_1 = storage.create_thread(
+        d1, user_id_1, "The First Thread", "Contents of first thread"
+    )
+    thread_id_2 = storage.create_thread(
+        d1, user_id_2, "The Second Thread", "Contents of second thread"
+    )
+
+    # Create a couple posts
+    post_id_1_1 = storage.create_post_in_thread(
+        user_id_2, thread_id_1, d1, "Thread1 Post2"
+    )
+    post_id_1_2 = storage.create_post_in_thread(
+        user_id_1, thread_id_1, d1, "Thread1 Post3"
+    )
+    post_id_2_1 = storage.create_post_in_thread(
+        user_id_1, thread_id_2, d1, "Thread2 Post2"
+    )
+
+    assert storage.query_posts_by_thread_id(thread_id_1, 10, 0) == [
+        PostData(
+            user_id=user_id_1,
+            post_id=1,
+            content="Contents of first thread",
+            post_date=d1,
+            edit_date=d1,
+        ),
+        PostData(
+            user_id=user_id_2,
+            post_id=post_id_1_1,
+            content="Thread1 Post2",
+            post_date=d1,
+            edit_date=d1,
+        ),
+        PostData(
+            user_id=user_id_1,
+            post_id=post_id_1_2,
+            content="Thread1 Post3",
+            post_date=d1,
+            edit_date=d1,
+        ),
+    ]
+
+    assert storage.query_posts_by_thread_id(thread_id_2, 10, 0) == [
+        PostData(
+            user_id=user_id_2,
+            post_id=2,
+            content="Contents of second thread",
+            post_date=d1,
+            edit_date=d1,
+        ),
+        PostData(
+            user_id=user_id_1,
+            post_id=post_id_2_1,
+            content="Thread2 Post2",
+            post_date=d1,
+            edit_date=d1,
+        ),
+    ]
+
+    # Post on nonexistant thread
+    with pytest.raises(ThreadIDDoesNotExist):
+        storage.create_post_in_thread(user_id_2, 1234, d1, "Thread1 Post2")

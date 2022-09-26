@@ -1,0 +1,12 @@
+<form method="post">
+    <div class="post dynColor" style="--red: {USER.color.r}; --green: {USER.color.g}; --blue: {USER.color.b};">
+        <div class="bar">
+            <div class="author">Your Reply:</div>
+            <div class="flex-spacer"></div>
+            <input type="submit" formaction="/threads/{THREAD.thread_id}/reply.html" value="Reply" class="primaryButton"/>
+        </div>
+        <div class="content borderDim">
+            <textarea class="multiLineInput" name="reply_content"></textarea>
+        </div>
+    </div>
+</form>
